@@ -1,0 +1,19 @@
+# Processor Type set to UNKNOWN TYPE
+# Include variables for this build
+include ./vars.ninja
+
+## for getting object files
+## This also gets dependencies
+rule buildToObject
+   deps = gcc
+   depfile = $out.d
+   command = $compiler $compilerFlags $inc $in -o $out -MMD -MF $out.d
+
+rule buildExe
+   command = $compiler $compilerFlags_EXE ./*.o -o $out
+
+## build all of the objects
+build TestSerialization.o: buildToObject TestSerialization.cpp
+
+## build the executable
+build output.exe: buildExe TestSerialization.o

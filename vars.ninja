@@ -1,0 +1,8 @@
+inc = -I ./include
+compiler = clang++ 
+CXXFLAGS = -O2
+DEFINES = -D USE_PREPROCESSOR_TRICKS=1
+OPTIONS = -c -pipe
+OPTIONS_EXE =
+compilerFlags = $OPTIONS $CXXFLAGS $DEFINES
+compilerFlags_EXE = $CXXFLAGS
