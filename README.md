@@ -197,7 +197,7 @@ Q: How does the FOR_EACH macros work?
 
 A: The references I used to implement them are listed in PreprocessorTricks.h but here they are again: [Link1](https://github.com/pfultz2/Cloak/wiki/C-Preprocessor-tricks,-tips,-and-idioms) and [Link2](https://www.scs.stanford.edu/~dm/blog/va-opt.html)
 
-TLDR; The C preprocessor is almost turing complete outside of not having infinite memory and infinite numbers of scans. With some careful definitions, you can create while loops and such.
+TLDR; The C preprocessor is almost turing complete (its still a PDA) outside of not having infinite memory and infinite numbers of scans. With some careful definitions, you can create while loops and such.
 
 Note that only 65 variables are allowed to be serialized using the preprocessor which should be more than enough. It can be expanded by changing EVAL.
 
@@ -208,6 +208,12 @@ Q: Does a class have to extend from SerializedObject?
 A: No. The example given for the structure is an example of how you would implement it for a class without extending from SerializedObject.
 
 Note that private variables can't be serialized without some modification to the class. A friend function must be defined to access those.
+
+Q: Why use fopen instead of the C++ approach using fstream and why not fopen_s for security?
+
+Cross platform is why I don't use fopen_s. For not using fstream, I found that the speed of reading is hampered by fstream while the C version doesn't have these issues.
+
+This could easily be a bug in the compiler I used or some other things need to be set to get the full speed. This can easily be changed if desired.
 
 # Solution for storing pointers
 There does exist a solution to pointers that can be utilized though it still has issues that can't be easily solved.
