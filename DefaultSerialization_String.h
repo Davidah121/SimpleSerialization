@@ -3,10 +3,11 @@
 #include <string>
 
 template<typename T>
-void staticSerialize(Streamable& output, std::basic_string<T>& var)
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, std::basic_string<T>& var)
 {
-    size_t s = var.size()+1; //include null character
-    output.write(&s, sizeof(size_t));
+    //Generic possibly. Can't write out as a simple string like others.
+    //null character not needed
+    formatter.writeStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::basic_string<T>>(), varName, var.size());
     for(T& c : var)
     {
         staticSerialize(output, c); //must be trivial but that doesn't mean simple
@@ -14,43 +15,51 @@ void staticSerialize(Streamable& output, std::basic_string<T>& var)
 }
 
 template<typename T>
-void staticDeserialize(Streamable& input, std::basic_string<T>& var)
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::basic_string<T>& var)
 {
-    size_t s;
-    input.read(&s, sizeof(size_t)); //read size
+    //Generic possibly. Can't write out as a simple string like others.
+    //null character not needed
+    int64_t s = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::basic_string<T>>(), varName);
+    if(s < 0)
+        return; //couldn't find it.
+
     var.reserve(s); //reserve data
-    for(size_t i=0; i<s; i++)
+    for(int64_t i=0; i<s; i++)
     {
         staticDeserialize(input, var[i]); //must be trivial but that doesn't mean simple
     }
 }
 
-void staticSerialize(Streamable& output, std::string& var)
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, std::string& var)
 {
-    size_t s = var.size()+1; //include null character
-    output.write(&s, sizeof(size_t));
-    output.write(var.c_str(), s*sizeof(char)); //primitive type. Can write directly
+    formatter.writeStart(output, DataFormatter::FORMAT_DATA, TypeInfo::get<std::string>(), varName, 1);
+    formatter.writeString(output, TypeInfo::get<char>(), var.data(), var.size()+1);
 }
 
-void staticDeserialize(Streamable& input, std::string& var)
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::string& var)
 {
-    size_t s;
-    input.read(&s, sizeof(size_t)); //read size
-    var.reserve(s*sizeof(char)); //reserve data
-    input.read((void*)var.data(), s*sizeof(char)); //read data into string
+    std::vector<char> buffer;
+    int64_t elements = formatter.readStart(input, DataFormatter::FORMAT_DATA, TypeInfo::get<std::string>(), varName);
+    if(elements < 1)
+        return; //couldn't find it.
+    
+    formatter.readString(input, TypeInfo::get<char>(), buffer);
+    var.assign(buffer.data());
 }
 
-void staticSerialize(Streamable& output, std::wstring& var)
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, std::wstring& var)
 {
-    size_t s = var.size()+1; //include null character
-    output.write(&s, sizeof(size_t));
-    output.write(var.c_str(), s*sizeof(wchar_t)); //primitive type. Can write directly
+    formatter.writeStart(output, DataFormatter::FORMAT_DATA, TypeInfo::get<std::wstring>(), varName, 1);
+    formatter.writeString(output, TypeInfo::get<wchar_t>(), var.data(), var.size()+1);
 }
 
-void staticDeserialize(Streamable& input, std::wstring& var)
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::wstring& var)
 {
-    size_t s;
-    input.read(&s, sizeof(size_t)); //read size
-    var.reserve(s*sizeof(wchar_t)); //reserve data
-    input.read((void*)var.data(), s*sizeof(wchar_t)); //read data into string
+    std::vector<char> buffer;
+    int64_t elements = formatter.readStart(input, DataFormatter::FORMAT_DATA, TypeInfo::get<std::wstring>(), varName);
+    if(elements < 1)
+        return; //couldn't find it.
+    
+    formatter.readString(input, TypeInfo::get<wchar_t>(), buffer);
+    var.assign((wchar_t*)buffer.data());
 }

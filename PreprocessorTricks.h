@@ -13,7 +13,10 @@
 #endif
 
 #if USE_PREPROCESSOR_TRICKS
+
+    #define PASSTHROUGH(x) x
     #define PARENS ()
+    #define COMMA ,
     #define EVAL(...)  EVAL1(EVAL1(__VA_ARGS__))
     #define EVAL1(...) EVAL2(EVAL2(__VA_ARGS__))
     #define EVAL2(...) EVAL3(EVAL3(__VA_ARGS__))
@@ -21,7 +24,7 @@
     #define EVAL4(...) EVAL5(EVAL5(__VA_ARGS__))
     #define EVAL5(...) __VA_ARGS__
 
-    #if __cplusplus <= 201703
+    #if __cplusplus <= 201703L
         #define USING_NEW_PREPROCESSOR_METHOD 0
         #define CAT(a, ...) PRIMITIVE_CAT(a, __VA_ARGS__)
         #define PRIMITIVE_CAT(a, ...) a ## __VA_ARGS__
@@ -79,17 +82,17 @@
         #define FOR_EACH_FUNCTION_INDIRECT() FOR_EACH_FUNCTION_HELPER
 
         #define FOR_EACH_LIST_HELPER(macro, x, ...)\
-            macro(x),\
+            macro(x)\
             IF(NOT(IS_EMPTY(__VA_ARGS__)))\
             (\
-                OBSTRUCT(FOR_EACH_LIST_INDIRECT) PARENS (macro, __VA_ARGS__)\
+                OBSTRUCT(FOR_EACH_LIST_INDIRECT) () (macro, __VA_ARGS__)\
             )
         #define FOR_EACH_LIST(macro, ...)\
             IF(NOT(IS_EMPTY(__VA_ARGS__)))\
             (\
                 EVAL(FOR_EACH_LIST_HELPER(macro, __VA_ARGS__))\
             )
-        #define FOR_EACH_LIST_INDIRECT() FOR_EACH_LIST_HELPER
+        #define FOR_EACH_LIST_INDIRECT() , FOR_EACH_LIST_HELPER
     #else
         #define USING_NEW_PREPROCESSOR_METHOD 1
         #define FOR_EACH_FUNCTION(macro, ...)                                    \
@@ -102,8 +105,8 @@
         #define FOR_EACH_LIST(macro, ...)                                    \
         __VA_OPT__(EVAL(FOR_EACH_LIST_HELPER(macro, __VA_ARGS__)))
         #define FOR_EACH_LIST_HELPER(macro, a1, ...)                         \
-        macro(a1),                                                     \
-        __VA_OPT__(FOR_EACH_LIST_AGAIN PARENS (macro, __VA_ARGS__))
+        macro(a1)                                                     \
+        __VA_OPT__(, FOR_EACH_LIST_AGAIN PARENS (macro, __VA_ARGS__))
         #define FOR_EACH_LIST_AGAIN() FOR_EACH_LIST_HELPER
 
         #define FOR_EACH(macro, ...)                                    \

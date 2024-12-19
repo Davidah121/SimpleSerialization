@@ -1,70 +1,61 @@
 #pragma once
 #include "PreprocessorTricks.h"
-#include <bitset>
-#include <typeinfo>
-#include <string>
 #include <unordered_map>
-#include "Streamable.h"
+#include "TypeInfo.h"
+#include "DataFormatter.h"
 
-class TypeInfoHash;
-struct TypeInfo;
-struct SerializedVariable;
+//EXCEPTION STUFF
+class SimpleSerializationException : public std::runtime_error
+{
+public:
+    SimpleSerializationException(std::string msg) : std::runtime_error(msg) {}
+};
+
+//
 class SerializedObject;
+class DataFormatter;
+
+template<typename T>
+struct SerializedVariable;
 
 template<typename T, typename... Args>
-void staticSerialize(Streamable& output, T& var1, Args&... var2);
+void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor, T& var1, Args&... var2);
 template<typename T>
-void staticSerialize(Streamable& output, T& var);
-void staticSerialize(Streamable& output);
+void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor, T& var);
+void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor);
 
 template<typename T, typename... Args>
-void staticDeserialize(Streamable& input, T& var1, Args&... var2);
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var1, const Args&... var2);
 template<typename T>
-void staticDeserialize(Streamable& input, T& var1);
-void staticDeserialize(Streamable& input);
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var);
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor);
 
-std::string demangleClassName(std::string name);
+template<typename T, typename... Args>
+void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor, T& var1, Args&... var2);
+template<typename T>
+void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor, T& var1);
+void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor);
 
-enum OPTIONS
-{
-    IS_INTEGER,
-    IS_FLOAT,
-    IS_SIGNED,
-    IS_TRIVIAL,
-    IS_POINTER,
-    IS_SERIALIZABLE,
-    IS_VOID,
-    IS_TEMPLATE
-};
+template<typename T, typename... Args>
+void staticDeserializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var1, const Args&... var2);
+template<typename T>
+void staticDeserializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var);
+void staticDeserializeVar(SerializedStreamable& input, DataFormatter& preprocessor);
 
-struct TypeInfo final
-{
-    std::string name;
-    uint32_t size;
-    uint64_t hash;
-    std::bitset<8> attributes;
 
-    bool operator==(const TypeInfo& t) const
-    {
-        return hash == t.hash;
-    }
+//OVERLOAD THESE 2
+template<typename T>
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& preprocessor, const std::string varName, T& var);
+template<typename T>
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& preprocessor, const std::string varName, T& var);
 
-    std::string getName()
-    {
-        #ifdef _unix_
-            return demangleClassName((std::string)name);
-        #else
-            return (std::string)name;
-        #endif
-    }
-    
-    template <typename T>
-    static TypeInfo get();
-};
+void mergeSerializedVariableMaps(std::string rootClassName, const std::unordered_map<std::string, SerializedVariable<void>>& rootMap, std::unordered_map<std::string, SerializedVariable<void>>& currMap);
 
+template<typename T>
 struct SerializedVariable final
 {
-    void* data;
+    std::string name;
+    T* data;
     TypeInfo type;
 };
 
@@ -72,119 +63,256 @@ class SerializedObject
 {
 public:
     virtual const TypeInfo getClass() const = 0;
-    virtual void serialize(Streamable& output){} //for overriding
-    virtual void deserialize(Streamable& input){} //for overriding
-    virtual std::unordered_map<std::string, SerializedVariable> getSerializedVariables() { return {};}
+    virtual void serialize(SerializedStreamable& output, DataFormatter& formatter){} //for overriding
+    virtual void deserialize(SerializedStreamable& input, DataFormatter& formatter){} //for overriding
+    virtual std::unordered_map<std::string, SerializedVariable<void>> getSerializedVariables() { return {};}
+
+protected:
+    void superSerialize(SerializedStreamable& output, DataFormatter& formatter){}
+    void superDeserialize(SerializedStreamable& input, DataFormatter& formatter){}
+    void superGetSerializedVariables(std::unordered_map<std::string, SerializedVariable<void>>& thisClassVars){}
 };
 
+#ifndef SERIALIZE_VOID
+    #define SERIALIZE_VOID(var) {#var, &var, TypeInfo::get<decltype(var)>()}
+#endif
 #ifndef SERIALIZE
-    #define SERIALIZE(var) {&var, TypeInfo::get<decltype(var)>()}
-	#define SERIALIZE_MAP(var) {#var, SERIALIZE(var)}
+    #define SERIALIZE(var) SerializedVariable<decltype(var)>SERIALIZE_VOID(var)
+#endif
+#ifndef SERIALIZE_MAP
+	#define SERIALIZE_MAP(var) {#var, SERIALIZE_VOID(var)}
+#endif
 
-    #define SERIALIZE_FUNCTION_DEFINITIONS()\
-        virtual const TypeInfo getClass() const;\
-        virtual void serialize(Streamable& output);\
-        virtual void deserialize(Streamable& input);\
-        virtual std::unordered_map<std::string, SerializedVariable> getSerializedVariables();
-
-    #define SERIALIZE_CLASS_GETCLASS(T)\
-        inline const TypeInfo T::getClass() const {return TypeInfo::get<T>();}
-
-    #define SERIALIZE_CLASS_SERIALIZE_VARIABLES(T, ...)\
-        inline std::unordered_map<std::string, SerializedVariable> T::getSerializedVariables()\
-        { return {FOR_EACH_LIST(SERIALIZE_MAP, __VA_ARGS__)}; }
-
-    #define SERIALIZE_CLASS_SERIALIZE_FUNCTIONS(T, ...)\
-        inline void T::serialize(Streamable& output)\
-        { staticSerialize(output, __VA_ARGS__); }\
-        inline void T::deserialize(Streamable& input)\
-        { staticDeserialize(input, __VA_ARGS__); }
-    
-    #define SERIALIZE_CLASS(T, ...)\
-        SERIALIZE_CLASS_GETCLASS(T)\
-        SERIALIZE_CLASS_SERIALIZE_FUNCTIONS(T, __VA_ARGS__)\
-        SERIALIZE_CLASS_SERIALIZE_VARIABLES(T, __VA_ARGS__)
+#ifndef SERIALIZE_CLASS_GETCLASS
+    #define SERIALIZE_CLASS_GETCLASS()\
+        virtual const TypeInfo getClass() const {return TypeInfo::get<std::remove_pointer<decltype(this)>::type>();}
 #endif
 
 
-template<typename T>
-inline TypeInfo TypeInfo::get()
+#ifndef SERIALIZE_CLASS_SERIALIZE_VARIABLES
+    #define SERIALIZE_CLASS_SERIALIZE_VARIABLES(...)\
+        virtual std::unordered_map<std::string, SerializedVariable<void>> getSerializedVariables()\
+        {\
+            std::unordered_map<std::string, SerializedVariable<void>> currMap = {FOR_EACH_LIST(SERIALIZE_MAP, __VA_ARGS__)};\
+            superGetSerializedVariables(currMap);\
+            return currMap;\
+        }
+#endif
+
+#ifndef ATTEMPT_SUPER_SERIALIZE_FUNCTIONS
+    #define ATTEMPT_SUPER_SERIALIZE_FUNCTIONS()\
+        private:\
+        template<typename T, typename std::enable_if<std::is_base_of<SerializedObject, T>::value, int>::type = true>\
+        void attemptSuperSerialize(SerializedStreamable& output, DataFormatter& formatter){T::serialize(output, formatter);}\
+        template<typename T, typename std::enable_if<!std::is_base_of<SerializedObject, T>::value, int>::type = true>\
+        void attemptSuperSerialize(SerializedStreamable& output, DataFormatter& formatter){staticSerialize(output, formatter, (T)(*this));}\
+        \
+        template<typename T, typename std::enable_if<std::is_base_of<SerializedObject, T>::value, int>::type = true>\
+        void attemptSuperDeserialize(SerializedStreamable& input, DataFormatter& formatter){T::deserialize(input, formatter);}\
+        template<typename T, typename std::enable_if<!std::is_base_of<SerializedObject, T>::value, int>::type = true>\
+        void attemptSuperDeserialize(SerializedStreamable& input, DataFormatter& formatter){staticDeserialize(input, formatter, (T)(*this));}
+#endif
+
+#ifndef SERIALIZE_CLASS_SERIALIZE_FUNCTIONS
+    #define SERIALIZE_CLASS_SERIALIZE_FUNCTIONS(...)\
+        virtual void serialize(SerializedStreamable& output, DataFormatter& formatter)\
+        { superSerialize(output, formatter); staticSerializeVar(output, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__)); }\
+        virtual void deserialize(SerializedStreamable& input, DataFormatter& formatter)\
+        { superDeserialize(input, formatter); staticDeserializeVar(input, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__)); }
+#endif
+
+    #define CALL_CLASS_SERIALIZE_HELPER(T) attemptSuperSerialize<T>(output, formatter);
+    #define CALL_CLASS_DESERIALIZE_HELPER(T) attemptSuperDeserialize<T>(input, formatter);
+    #define CALL_CLASS_SERIALIZED_VARIABLES_HELPER(T) mergeSerializedVariableMaps(#T, T::getSerializedVariables(), currMap);
+
+    #define SERIALIZE_SUPER_SERIALIZE_FUNCTION(...)\
+        virtual void superSerialize(SerializedStreamable& output, DataFormatter& formatter)\
+        { FOR_EACH(CALL_CLASS_SERIALIZE_HELPER, __VA_ARGS__)}\
+        virtual void superDeserialize(SerializedStreamable& input, DataFormatter& formatter)\
+        { FOR_EACH(CALL_CLASS_DESERIALIZE_HELPER, __VA_ARGS__)}
+
+    #define SERIALIZE_SUPER_SERIALIZE_VARIABLES(...)\
+        virtual void superGetSerializedVariables(std::unordered_map<std::string, SerializedVariable<void>>& currMap)\
+        { FOR_EACH(CALL_CLASS_SERIALIZED_VARIABLES_HELPER, __VA_ARGS__) }
+    
+    #define SERIALIZE_CLASS(...)\
+    public:\
+        SERIALIZE_CLASS_GETCLASS()\
+        SERIALIZE_CLASS_SERIALIZE_FUNCTIONS(__VA_ARGS__)\
+        SERIALIZE_CLASS_SERIALIZE_VARIABLES(__VA_ARGS__)
+    
+    #define SERIALIZE_SUPER_CLASS(...)\
+    ATTEMPT_SUPER_SERIALIZE_FUNCTIONS()\
+    protected:\
+        SERIALIZE_SUPER_SERIALIZE_FUNCTION(__VA_ARGS__)\
+        SERIALIZE_SUPER_SERIALIZE_VARIABLES(__VA_ARGS__)
+
+
+inline void mergeSerializedVariableMaps(std::string rootClassName, const std::unordered_map<std::string, SerializedVariable<void>>& rootMap, std::unordered_map<std::string, SerializedVariable<void>>& currMap)
 {
-    TypeInfo info;
-    info.name = typeid(T).name();
-    #if(T == void)
-        info.size = 0;
-    #else
-        info.size = sizeof(T);
-    #endif
-    info.hash = typeid(T).hash_code();
-    info.attributes[IS_INTEGER] = std::is_integral<T>();
-    info.attributes[IS_FLOAT] = std::is_floating_point<T>();
-    info.attributes[IS_SIGNED] = std::is_signed<T>();
-    info.attributes[IS_TRIVIAL] = std::is_trivially_copyable<T>();
-    info.attributes[IS_POINTER] = std::is_pointer<T>();
-    info.attributes[IS_SERIALIZABLE] = std::is_base_of<SerializedObject, T>();
-    info.attributes[IS_VOID] = std::is_void<T>();
-    info.attributes[IS_TEMPLATE] = info.name.find('<') != SIZE_MAX;
-    return info;
+    for(std::pair<std::string, SerializedVariable<void>> entry : rootMap)
+    {
+        entry.first = rootClassName + "::" + entry.first;
+        currMap.insert(entry);
+    }
 }
 
-void staticSerialize(Streamable& output)
+
+void staticSerialize(SerializedStreamable& output, DataFormatter& formatter)
 {
     //base case. do nothing
 }
 
 template<typename T, typename... Args>
-void staticSerialize(Streamable& output, T& var1, Args&... var2)
+void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, T& var1, Args&... var2)
 {
     //print something
-    staticSerialize(output, var1);
-    staticSerialize(output, var2...);
+    staticSerialize(output, formatter, var1);
+    staticSerialize(output, formatter, var2...);
 }
 
 template<typename T>
-void staticSerialize(Streamable& output, T& var)
+void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, T& var)
 {
     //special clause for keeping things a bit simpler
     TypeInfo t = TypeInfo::get<T>();
     if(t.attributes[IS_SERIALIZABLE])
     {
-        ((SerializedObject&)var).serialize(output);
+        //MARK START
+        formatter.writeStart(output, DataFormatter::FORMAT_OBJECT, t, "", 1); //no known name
+        ((SerializedObject&)var).serialize(output, formatter);
     }
     else
     {
-        output.write(&var, sizeof(T));
+        //skip marking start for custom marking. NO VARIABLE NAME KNOWN
+        staticSerializeHandler(output, formatter, "", var);
     }
+
+    //MARK END
+    formatter.writeEnd(output);
 }
 
-void staticDeserialize(Streamable& input)
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& formatter)
+{
+    //base case. do nothing
+}
+
+template<typename T, typename... Args>
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& formatter, const SerializedVariable<T>& var1, const Args&... var2)
+{
+    //print something
+    staticSerializeVar(output, formatter, var1);
+    staticSerializeVar(output, formatter, var2...);
+}
+
+template<typename T>
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& formatter, const SerializedVariable<T>& var)
+{
+    //special clause for keeping things a bit simpler
+    if(var.type.attributes[IS_SERIALIZABLE])
+    {
+        //MARK START
+        formatter.writeStart(output, DataFormatter::FORMAT_OBJECT, var.type, var.name, 1);
+        ((SerializedObject*)var.data)->serialize(output, formatter);
+    }
+    else
+    {
+        //skip marking start to allow for custom marking
+        staticSerializeHandler(output, formatter, var.name, *var.data);
+    }
+
+    //MARK END
+    formatter.writeEnd(output);
+}
+
+template<typename T>
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, T& var)
+{
+    TypeInfo t = TypeInfo::get<T>();
+    formatter.writeStart(output, DataFormatter::FORMAT_DATA, t, varName, 1);
+    if(t.attributes[IS_FLOAT] || t.attributes[IS_INTEGER])
+        formatter.writeNumber(output, t, (void*)&var);
+    else
+        formatter.writeRaw(output, t, (void*)&var);
+}
+
+void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter)
 {
     //nothing. base case
 }
 
 template<typename T, typename... Args>
-void staticDeserialize(Streamable& input, T& var1, Args&... var2)
+void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, T& var1, Args&... var2)
 {
     //print something
-    staticDeserialize(input, var1);
-    staticDeserialize(input, var2...);
+    staticDeserialize(input, formatter, var1);
+    staticDeserialize(input, formatter, var2...);
 }
 template<typename T>
-void staticDeserialize(Streamable& input, T& var)
+void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, T& var)
 {
     //special clause for keeping things a bit simpler
     TypeInfo t = TypeInfo::get<T>();
     if(t.attributes[IS_SERIALIZABLE])
     {
-        ((SerializedObject&)var).deserialize(input);
+        //READ START
+        int64_t elements = formatter.readStart(input, DataFormatter::FORMAT_OBJECT, t, "");
+        if(elements >= 1)
+            ((SerializedObject&)var).deserialize(input, formatter);
+        
     }
     else
     {
-        input.read(&var, sizeof(T));
+        //skip marking start to allow custom marks
+        staticDeserializeHandler(input, formatter, "", var);
     }
+    formatter.readEnd(input);
 }
 
-inline std::string demangleClassName(std::string name)
+void staticDeserializeVar(SerializedStreamable& input, DataFormatter& formatter)
 {
-    return name;
+    //nothing. base case
+}
+
+template<typename T, typename... Args>
+void staticDeserializeVar(SerializedStreamable& input, DataFormatter& formatter, const SerializedVariable<T>& var1, const Args&... var2)
+{
+    //print something
+    staticDeserializeVar(input, formatter, var1);
+    staticDeserializeVar(input, formatter, var2...);
+}
+template<typename T>
+void staticDeserializeVar(SerializedStreamable& input, DataFormatter& formatter, const SerializedVariable<T>& var)
+{
+    //special clause for keeping things a bit simpler
+    if(var.type.attributes[IS_SERIALIZABLE])
+    {
+        //MARK START
+        int64_t elements = formatter.readStart(input, DataFormatter::FORMAT_OBJECT, var.type, var.name);
+        if(elements >= 1)
+            ((SerializedObject*)var.data)->deserialize(input, formatter);
+    }
+    else
+    {
+        //skip marking start to allow custom marks
+        staticDeserializeHandler(input, formatter, var.name, *var.data);
+    }
+
+    //MARK END
+    formatter.readEnd(input);
+}
+
+template<typename T>
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, T& var)
+{
+    //MARK START
+    TypeInfo t = TypeInfo::get<T>();
+    int64_t elements = formatter.readStart(input, DataFormatter::FORMAT_DATA, t, varName);
+    if(elements >= 1)
+    {
+        if(t.attributes[IS_FLOAT] || t.attributes[IS_INTEGER])
+            formatter.readNumber(input, t, (void*)&var);
+        else
+            formatter.readRaw(input, t, (void*)&var);
+    }
 }

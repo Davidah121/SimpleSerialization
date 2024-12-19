@@ -3,24 +3,28 @@
 #include <vector>
 
 template<typename T>
-void staticSerialize(Streamable& output, std::vector<T>& var)
+void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, std::vector<T>& var)
 {
-    size_t s = var.size();
-    output.write(&s, sizeof(size_t)); //write size of list
-    for(size_t i=0; i<var.size(); i++)
+    formatter.writeStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<T>(), varName, var.size());
+    
+    for(int64_t i=0; i<var.size(); i++)
     {
-        staticSerialize(output, var[i]);
+        staticSerialize(output, formatter, var[i]);
     }
 }
 
 template<typename T>
-void staticDeserialize(Streamable& input, std::vector<T>& var)
+void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::vector<T>& var)
 {
-    size_t s = 0;
-    input.read(&s, sizeof(size_t)); //read size of list
+    int64_t s = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<T>(), varName);
+    std::cout << s << std::endl;
+    if(s < 0)
+        return; //couldn't find it. potentially an error.
+        
+    
     var = std::vector<T>(s);
-    for(size_t i=0; i<var.size(); i++)
+    for(int64_t i=0; i<var.size(); i++)
     {
-        staticDeserialize(input, var[i]); //need default constructor
+        staticDeserialize(input, formatter, var[i]); //need default constructor
     }
 }

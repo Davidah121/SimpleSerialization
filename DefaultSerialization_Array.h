@@ -3,27 +3,27 @@
 #include <array>
 
 template<typename T, size_t S>
-void staticSerialize(Streamable& output, std::array<T, S>& var)
+void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, const std::string varName, std::array<T, S>& var)
 {
-    size_t writeSize = S;
-    output.write(&writeSize, sizeof(size_t)); //write size of list
-    for(size_t i=0; i<writeSize; i++)
+    formatter.writeStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::array<T, S>>(), varName, S);
+    for(size_t i=0; i<S; i++)
     {
         staticSerialize(output, var[i]);
     }
 }
 
 template<typename T, size_t S>
-void staticDeserialize(Streamable& input, std::array<T, S>& var)
+void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::array<T, S>& var)
 {
-    size_t readSize = 0;
-    input.read(&readSize, sizeof(size_t)); //read size of list
-    //S must readSize. otherwise throw an error
-    if(S != readSize)
-        throw S; //TODO: FIX THIS. Should throw proper exceptions
+    int64_t readSize = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::array<T, S>>(), varName);
+    if(S < 0)
+        return; //couldn't find it. probably okay.
     
-    for(size_t i=0; i<readSize; i++)
+    if(S != readSize)
+        throw std::runtime_error("std::array deserialization failed. Size read does not equal desired size. Read " + std::to_string(readSize) + ", Needs " + std::to_string(S));
+
+    for(size_t i=0; i<S; i++)
     {
-        staticDeserialize(input, var[i]); //need default constructor
+        staticDeserialize(output, var[i]);
     }
 }
