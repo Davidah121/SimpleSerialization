@@ -106,7 +106,46 @@ private:
     short z;
     char* str = nullptr;
 
-SERIALIZE(x, y, z, string)
+SERIALIZE_CLASS(x, y, z, string)
+};
+
+//NO ADDITIONAL WORK NEEDED FOR CLASSES IF THIS IS DONE
+```
+
+If its a class with a parent that extends from SerializedObject:
+```C++
+
+class SomeClass2 : public SomeClass
+{
+public:
+    SomeClass2(){}
+    SomeClass2(SomeData extraStuff)
+    {
+        myProtectedStuff = extraStuff;
+    }
+    ~SomeClass2(){}
+protected:
+    SomeData myProtectedStuff;
+
+SERIALIZE_SUPER_CLASS(SomeClass)
+SERIALIZE_CLASS(myProtectedStuff)
+};
+
+//NO ADDITIONAL WORK NEEDED FOR CLASSES IF THIS IS DONE
+```
+
+
+If its a class with a parent that extends from something else that isn't a SerializedObject:
+```C++
+
+class SomeClass3 : public SerializedObject, public SomeData
+{
+public:
+    SomeClass3(){}
+    ~SomeClass3(){}
+
+SERIALIZE_SUPER_CLASS(SomeData)
+SERIALIZE_CLASS()
 };
 
 //NO ADDITIONAL WORK NEEDED FOR CLASSES IF THIS IS DONE
