@@ -42,18 +42,22 @@ struct SomeData
     char* string;
 };
 
-void staticSerialization(Streamable& output, SomeData& var)
+void staticSerializationHandler(Streamable& output, DataFormatter& formatter, const std::string& varName, SomeData& var)
 {
-    staticSerialization(output, var.x);
-    staticSerialization(output, var.y);
-    staticSerialization(output, var.z);
+    formatter.writeStart(output, DataFormatter::FORMAT_OBJECT, TypeInfo::get<SomeData>(), varName, 1);
+    staticSerialization(output, formatter, var.x);
+    staticSerialization(output, formatter, var.y);
+    staticSerialization(output, formatter, var.z);
 }
 
-void staticDeserialization(Streamable& input, SomeData& var)
+void staticDeserializationHandler(Streamable& input, DataFormatter& formatter, const std::string& varName, SomeData& var)
 {
-    staticDeserialization(output, var.x);
-    staticDeserialization(output, var.y);
-    staticDeserialization(output, var.z);
+    int64_t elements = formatter.readStart(output, DataFormatter::FORMAT_OBJECT, TypeInfo::get<SomeData>(), varName);
+    if(elements != 1)
+        return;
+    staticDeserialization(output, formatter, var.x);
+    staticDeserialization(output, formatter, var.y);
+    staticDeserialization(output, formatter, var.z);
 }
 ```
 
@@ -61,17 +65,21 @@ If the data type uses templates:
 ```C++
 //Defining one for std::pair
 template<typename T, typename T2>
-void staticSerialization(Streamable& output, std::pair<T, T2>& var)
+void staticSerializationHandler(Streamable& output, DataFormatter& formatter, const std::string& varName, std::pair<T, T2>& var)
 {
-    staticSerialization(output, var.first);
-    staticSerialization(output, var.second);
+    formatter.writeStart(output, DataFormatter::FORMAT_OBJECT, TypeInfo::get<std::pair<T, T2>>(), varName, 1);
+    staticSerialization(output, formatter, var.first);
+    staticSerialization(output, formatter, var.second);
 }
 
 template<typename T, typename T2>
-void staticDeserialization(Streamable& input, std::pair<T, T2>& var)
+void staticDeserializationHandler(Streamable& input, DataFormatter& formatter, const std::string& varName, std::pair<T, T2>& var)
 {
-    staticDeserialization(input, var.first);
-    staticDeserialization(input, var.second);
+    int64_t elements = formatter.readStart(output, DataFormatter::FORMAT_OBJECT, TypeInfo::get<std::pair<T, T2>>(), varName);
+    if(elements != 1)
+        return;
+    staticDeserialization(input, formatter, var.first);
+    staticDeserialization(input, formatter, var.second);
 }
 ```
 
@@ -92,14 +100,14 @@ public:
         str = v4;
     }
     ~SomeClass(){}
-    SERIALIZE_FUNCTION_DEFINITIONS()
 private:
     long x;
     int y;
     short z;
     char* str = nullptr;
+
+SERIALIZE(x, y, z, string)
 };
-SERIALIZE_CLASS(SomeClass, x, y, z, string)
 
 //NO ADDITIONAL WORK NEEDED FOR CLASSES IF THIS IS DONE
 ```
@@ -136,16 +144,18 @@ void save()
 {
     initTestingData();
     StreamableFile file = StreamableFile("someSerializedDataFile", StreamableFile::TYPE_WRITE);
-    staticSerialization(file, globalSomeData);
-    staticSerialization(file, globalSomeClass);
-    staticSerialization(file, globalIntList);
+    RawDataFormatter formatter = RawDataFormatter();
+    staticSerialization(file, formatter, globalSomeData);
+    staticSerialization(file, formatter, globalSomeClass);
+    staticSerialization(file, formatter, globalIntList);
 }
 void load()
 {
     StreamableFile file = StreamableFile("someSerializedDataFile", StreamableFile::TYPE_READ);
-    staticDeserialization(file, globalSomeData);
-    staticDeserialization(file, globalSomeClass);
-    staticDeserialization(file, globalIntList);
+    RawDataFormatter formatter = RawDataFormatter();
+    staticDeserialization(file, formatter, globalSomeData);
+    staticDeserialization(file, formatter, globalSomeClass);
+    staticDeserialization(file, formatter, globalIntList);
 }
 ```
 
@@ -159,9 +169,9 @@ Currently, it writes out all data as raw memory values. This has 2 issues.
 - Pointers
 
 The size of a particular datatype is not guaranteed to be the same across systems which can cause problems when loading data. Using int32_t and int64_t datatypes and similar 
-help avoid these issues.
+help avoid these issues along with implementing a custom DataFormatter class.
 
-Endianness of data is a potenial problem as well. This can be fixed by adjusting the Streamble class implementations but a programmer must be aware of this.
+Endianness of data is a potenial problem as well. This can be fixed by implementing a custom DataFormatter class but a programmer must be aware of this.
 
 Pointers are written out as they are. The data that they store is not written out and restoring them has them pointing to junk that is potentially unallocated. Even if it is
 there is no guarantee that it was allocated for that purpose. It can easily belong to some other class or function for some other purpose.
@@ -214,6 +224,12 @@ Q: Why use fopen instead of the C++ approach using fstream and why not fopen_s f
 Cross platform is why I don't use fopen_s. For not using fstream, I found that the speed of reading is hampered by fstream while the C version doesn't have these issues.
 
 This could easily be a bug in the compiler I used or some other things need to be set to get the full speed. This can easily be changed if desired.
+
+Q: Can this be used to write out and read JSON / XML data formats?
+
+Absolutely. Though not implemented here, the framework for adding those now exists. Using the DataFormatter class, you can write out data however you wish and format it however you wish.
+
+This also allows a programmer to search for data by name and load that way. This is advantageous for managing versions of software that can have variable name changes or additional variables that didn't exist before and not breaking software.
 
 # Solution for storing pointers
 There does exist a solution to pointers that can be utilized though it still has issues that can't be easily solved.
