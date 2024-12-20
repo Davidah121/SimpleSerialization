@@ -55,6 +55,10 @@
         #define OBSTRUCT(...) __VA_ARGS__ DEFER(EMPTY)()
         #define EXPAND(...) __VA_ARGS__
 
+        #define EXECUTE_IF_NOT_EMPTY(macro, ...)\
+        IF(NOT(IS_EMPTY(__VA_ARGS__)))(macro)
+        
+
         #define FOR_EACH_HELPER(macro, x, ...)\
             macro(x)\
             IF(NOT(IS_EMPTY(__VA_ARGS__)))\
@@ -95,6 +99,9 @@
         #define FOR_EACH_LIST_INDIRECT() , FOR_EACH_LIST_HELPER
     #else
         #define USING_NEW_PREPROCESSOR_METHOD 1
+        #define EXECUTE_IF_NOT_EMPTY(macro, ...)\
+        __VA_OPT__(macro)
+
         #define FOR_EACH_FUNCTION(macro, ...)                                    \
         __VA_OPT__(EVAL(FOR_EACH_FUNCTION_HELPER(macro, __VA_ARGS__)))
         #define FOR_EACH_FUNCTION_HELPER(macro, a1, ...)                         \
@@ -117,6 +124,7 @@
         #define FOR_EACH_AGAIN() FOR_EACH_HELPER
     #endif
 #else
+    #define EXECUTE_IF_NOT_EMPTY(macro, ...)
     #define FOR_EACH_FUNCTION(macro, ...)
     #define FOR_EACH_LIST(macro, ...)
     #define FOR_EACH(macro, ...)

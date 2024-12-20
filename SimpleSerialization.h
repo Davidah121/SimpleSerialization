@@ -114,11 +114,17 @@ protected:
 #endif
 
 #ifndef SERIALIZE_CLASS_SERIALIZE_FUNCTIONS
+    #define SERIALIZE_HELPER_MACRO(...) staticSerializeVar(output, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__));
+    #define DESERIALIZE_HELPER_MACRO(...) staticDeserializeVar(input, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__));
     #define SERIALIZE_CLASS_SERIALIZE_FUNCTIONS(...)\
         virtual void serialize(SerializedStreamable& output, DataFormatter& formatter)\
-        { superSerialize(output, formatter); staticSerializeVar(output, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__)); }\
+        { superSerialize(output, formatter); \
+        EXECUTE_IF_NOT_EMPTY(SERIALIZE_HELPER_MACRO(__VA_ARGS__), __VA_ARGS__)\
+        }\
         virtual void deserialize(SerializedStreamable& input, DataFormatter& formatter)\
-        { superDeserialize(input, formatter); staticDeserializeVar(input, formatter, FOR_EACH_LIST(SERIALIZE, __VA_ARGS__)); }
+        { superDeserialize(input, formatter); \
+        EXECUTE_IF_NOT_EMPTY(DESERIALIZE_HELPER_MACRO(__VA_ARGS__), __VA_ARGS__)\
+        }
 #endif
 
     #define CALL_CLASS_SERIALIZE_HELPER(T) attemptSuperSerialize<T>(output, formatter);
