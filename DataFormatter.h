@@ -1,4 +1,4 @@
-
+#pragma once
 #include "SerializedStreamable.h"
 class DataFormatter
 {

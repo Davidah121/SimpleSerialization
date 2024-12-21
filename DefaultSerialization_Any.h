@@ -1,3 +1,4 @@
+#pragma once
 #include "SimpleSerialization.h"
 #include <any>
 #include <functional>
