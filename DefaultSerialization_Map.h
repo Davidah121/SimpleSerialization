@@ -18,7 +18,7 @@ void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatt
 template<typename key, typename T>
 void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::map<key, T>& var)
 {
-    int64_t size = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::map<key, T>>(), varName);
+    int64_t size = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::map<key, T>>(), varName);
     if(size < 0)
         return; //couldn't find it potentially
     
@@ -44,7 +44,7 @@ void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatt
 template<typename key, typename T>
 void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::multimap<key, T>& var)
 {
-    int64_t size = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::multimap<key, T>>(), varName);
+    int64_t size = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::multimap<key, T>>(), varName);
     if(size < 0)
         return; //couldn't find it potentially
     
@@ -73,7 +73,7 @@ void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatt
 template<typename key, typename T>
 void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::unordered_map<key, T>& var)
 {
-    int64_t size = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::unordered_map<key, T>>(), varName);
+    int64_t size = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::unordered_map<key, T>>(), varName);
     if(size < 0)
         return; //couldn't find it potentially
     
@@ -99,7 +99,7 @@ void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatt
 template<typename key, typename T>
 void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::unordered_multimap<key, T>& var)
 {
-    int64_t size = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::unordered_multimap<key, T>>(), varName);
+    int64_t size = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::unordered_multimap<key, T>>(), varName);
     if(size < 0)
         return; //couldn't find it potentially
     

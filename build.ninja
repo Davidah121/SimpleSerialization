@@ -13,7 +13,9 @@ rule buildExe
    command = $compiler $compilerFlags_EXE ./*.o -o $out
 
 ## build all of the objects
+build TypeInfo.o: buildToObject TypeInfo.cpp
+build SimpleSerialization.o: buildToObject SimpleSerialization.cpp
 build TestSerialization.o: buildToObject TestSerialization.cpp
 
 ## build the executable
-build output.exe: buildExe TestSerialization.o
+build output.exe: buildExe TestSerialization.o TypeInfo.o SimpleSerialization.o

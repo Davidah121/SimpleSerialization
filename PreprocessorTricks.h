@@ -9,12 +9,12 @@
     C++20 is required to use __VA_OPT__ but some compilers may support it on earlier versions of C++
 */
 #ifndef USE_PREPROCESSOR_TRICKS
-    #define USE_PREPROCESSOR_TRICKS 1
+    #define USE_PREPROCESSOR_TRICKS 0
 #endif
 
 #if USE_PREPROCESSOR_TRICKS
 
-    #define PASSTHROUGH(x) x
+    #define PASSTHROUGH_FUNCTION(x) x
     #define PARENS ()
     #define COMMA ,
     #define EVAL(...)  EVAL1(EVAL1(__VA_ARGS__))
@@ -47,8 +47,8 @@
         #define NOT(x) CHECK(PRIMITIVE_CAT(NOT_, x))
         #define NOT_0 PROBE(~)
 
-        #define BOOL(x) COMPLEMENT(NOT(x))
-        #define IF(c) IIF(BOOL(c))
+        #define BOOL_FUNCTION(x) COMPLEMENT(NOT(x))
+        #define IF(c) IIF(BOOL_FUNCTION(c))
 
         #define EMPTY()
         #define DEFER(x) x EMPTY()

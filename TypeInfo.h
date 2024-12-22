@@ -1,4 +1,3 @@
-#pragma once
 #include <bitset>
 #include <typeinfo>
 #include <string>
@@ -14,19 +13,10 @@
 #include <cxxabi.h>
 #endif
 
+std::string demangleClassName(std::string name);
 
-std::string demangleClassName(std::string name)
-{
-    #ifdef _unix_
-    std::string finalName = "";
-    int status = 0;
-    char* realName = abi::__cxa_demagle(name.c_str(), 0, 0, &status);
-    finalName = realName;
-    std::free(realName);
-    return finalName;
-    #endif
-    return name;
-}
+template<typename T>
+bool constexpr isSerializable();
 
 enum OPTIONS
 {
@@ -70,6 +60,7 @@ struct TypeInfo final
     static CONSTEXPR_OPTION TypeInfo get();
 };
 
+
 template<typename T>
 int constexpr safeSizeOf()
 {
@@ -94,7 +85,7 @@ inline CONSTEXPR_OPTION TypeInfo TypeInfo::get()
     info.attributes[IS_SIGNED] = std::is_signed<T>();
     info.attributes[IS_TRIVIAL] = std::is_trivially_copyable<T>();
     info.attributes[IS_POINTER] = std::is_pointer<T>();
-    info.attributes[IS_SERIALIZABLE] = std::is_base_of<SerializedObject, T>();
+    info.attributes[IS_SERIALIZABLE] = isSerializable<T>();
     info.attributes[IS_VOID] = std::is_void<T>();
     info.attributes[IS_TEMPLATE] = info.name.find('<') != SIZE_MAX;
     return info;

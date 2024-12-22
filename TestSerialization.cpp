@@ -32,13 +32,10 @@ class TestClass2 : virtual public TestClass1, virtual public SimpleVec2
 public:
     TestClass2(){}
     ~TestClass2(){}
-    void setPos(int v1, int v2, double v3) {TestClass1::setPos(v1, v2); z=v3;}
-    double getZ() {return z;}
 private:
-    double z=0;
 
     SERIALIZE_SUPER_CLASS(TestClass1, SimpleVec2)
-    SERIALIZE_CLASS(z)
+    SERIALIZE_CLASS()
 };
 
 
@@ -47,7 +44,7 @@ void testSerialize()
     SerializedStreamableFile outputFile = SerializedStreamableFile("SerializedDataFile", SerializedStreamableFile::TYPE_WRITE);
     RawDataFormatter formatter = RawDataFormatter();
 
-    TestClass2 t1; t1.setPos(12, 34, 32.2);
+    TestClass2 t1; t1.setPos(12, 34);
     t1.SimpleVec2::x = 1.0f;
     t1.SimpleVec2::y = 2.0f;
     std::vector<int> list1 = {1, 6, 2, 4, 0, 13, 18, 8};
@@ -91,7 +88,7 @@ void testDeserialize()
     inputFile.close();
 
     ///check if values are correct
-    std::cout << t1.getX() << ", " << t1.getY() << ", " << t1.getZ() << std::endl;
+    std::cout << t1.getX() << ", " << t1.getY() << std::endl;
 
     std::cout << list1.size() << std::endl;
     std::cout << "\t";

@@ -15,7 +15,7 @@ void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, con
 template<typename T, size_t S>
 void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, const std::string varName, std::array<T, S>& var)
 {
-    int64_t readSize = formatter.readStart(output, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::array<T, S>>(), varName);
+    int64_t readSize = formatter.readStart(input, DataFormatter::FORMAT_ARRAY, TypeInfo::get<std::array<T, S>>(), varName);
     if(S < 0)
         return; //couldn't find it. probably okay.
     
@@ -24,6 +24,6 @@ void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, co
 
     for(size_t i=0; i<S; i++)
     {
-        staticDeserialize(output, var[i]);
+        staticDeserialize(input, var[i]);
     }
 }

@@ -1,5 +1,7 @@
 #pragma once
 #include "SerializedStreamable.h"
+#include "TypeInfo.h"
+
 class DataFormatter
 {
 public:

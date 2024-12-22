@@ -1,8 +1,13 @@
 #pragma once
 #include "PreprocessorTricks.h"
 #include <unordered_map>
-#include "TypeInfo.h"
 #include "DataFormatter.h"
+
+
+//
+class SerializedObject;
+template<typename T>
+struct SerializedVariable;
 
 //EXCEPTION STUFF
 class SimpleSerializationException : public std::runtime_error
@@ -11,36 +16,31 @@ public:
     SimpleSerializationException(std::string msg) : std::runtime_error(msg) {}
 };
 
-//
-class SerializedObject;
-class DataFormatter;
+void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor);
+void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor);
+void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor);
+void staticDeserializeVar(SerializedStreamable& input, DataFormatter& preprocessor);
 
-template<typename T>
-struct SerializedVariable;
 
 template<typename T, typename... Args>
 void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor, T& var1, Args&... var2);
 template<typename T>
 void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor, T& var);
-void staticSerialize(SerializedStreamable& output, DataFormatter& preprocessor);
 
 template<typename T, typename... Args>
 void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var1, const Args&... var2);
 template<typename T>
 void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var);
-void staticSerializeVar(SerializedStreamable& output, DataFormatter& preprocessor);
 
 template<typename T, typename... Args>
 void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor, T& var1, Args&... var2);
 template<typename T>
 void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor, T& var1);
-void staticDeserialize(SerializedStreamable& input, DataFormatter& preprocessor);
 
 template<typename T, typename... Args>
 void staticDeserializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var1, const Args&... var2);
 template<typename T>
 void staticDeserializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var);
-void staticDeserializeVar(SerializedStreamable& input, DataFormatter& preprocessor);
 
 
 //OVERLOAD THESE 2
@@ -164,11 +164,6 @@ inline void mergeSerializedVariableMaps(std::string rootClassName, const std::un
 }
 
 
-void staticSerialize(SerializedStreamable& output, DataFormatter& formatter)
-{
-    //base case. do nothing
-}
-
 template<typename T, typename... Args>
 void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, T& var1, Args&... var2)
 {
@@ -196,11 +191,6 @@ void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, T& 
 
     //MARK END
     formatter.writeEnd(output);
-}
-
-void staticSerializeVar(SerializedStreamable& output, DataFormatter& formatter)
-{
-    //base case. do nothing
 }
 
 template<typename T, typename... Args>
@@ -242,11 +232,6 @@ void staticSerializeHandler(SerializedStreamable& output, DataFormatter& formatt
         formatter.writeRaw(output, t, (void*)&var);
 }
 
-void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter)
-{
-    //nothing. base case
-}
-
 template<typename T, typename... Args>
 void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, T& var1, Args&... var2)
 {
@@ -273,11 +258,6 @@ void staticDeserialize(SerializedStreamable& input, DataFormatter& formatter, T&
         staticDeserializeHandler(input, formatter, "", var);
     }
     formatter.readEnd(input);
-}
-
-void staticDeserializeVar(SerializedStreamable& input, DataFormatter& formatter)
-{
-    //nothing. base case
 }
 
 template<typename T, typename... Args>
@@ -321,4 +301,10 @@ void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& format
         else
             formatter.readRaw(input, t, (void*)&var);
     }
+}
+
+template<typename T>
+bool constexpr isSerializable()
+{
+    return std::is_base_of<SerializedObject, T>();
 }
