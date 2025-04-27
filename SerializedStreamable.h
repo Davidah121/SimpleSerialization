@@ -51,6 +51,13 @@ public:
      */
     virtual bool seek(size_t location) = 0;
 
+    /**
+     * @brief Returns the total size known.
+     * 
+     * @return size_t 
+     */
+    virtual size_t size() = 0;
+
     bool canRead()
     {
         return isReadable;
@@ -67,7 +74,11 @@ protected:
 class SerializedStreamableVector : public SerializedStreamable
 {
 public:
-    SerializedStreamableVector(){}
+    SerializedStreamableVector()
+    {
+        isReadable = true;
+        isWritable = true;
+    }
     SerializedStreamableVector(size_t size)
     {
         isReadable = true;
@@ -97,7 +108,7 @@ public:
     }
     virtual bool read(void* inputBuffer, size_t sizeInBytes)
     {
-        if(sizeInBytes + index >= buffer.size())
+        if(sizeInBytes + index > buffer.size())
             return false;
         std::memcpy(inputBuffer, (void*)&buffer[index], sizeInBytes);
         index += sizeInBytes;
@@ -106,7 +117,7 @@ public:
     
     virtual bool peek(void* inputBuffer, size_t sizeInBytes)
     {
-        if(sizeInBytes + index >= buffer.size())
+        if(sizeInBytes + index > buffer.size())
             return false;
         std::memcpy(inputBuffer, (void*)&buffer[index], sizeInBytes);
         return true;
@@ -121,14 +132,20 @@ public:
         else
             return false;
     }
+    
+    virtual size_t size()
+    {
+        return buffer.size();
+    }
 
     std::vector<unsigned char>& getBuffer()
     {
         return buffer;
     }
+    
 private:
-    size_t index;
-    std::vector<unsigned char> buffer;
+    size_t index = 0;
+    std::vector<unsigned char> buffer = std::vector<unsigned char>();
 };
 
 
@@ -202,6 +219,12 @@ public:
         int err = fseek(file, index, SEEK_SET);
         return err != 0;
     }
+    
+    virtual size_t size()
+    {
+        return fileSize;
+    }
+    
 
     void close()
     {

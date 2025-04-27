@@ -111,7 +111,7 @@ void displayFields()
     for(auto field : c.getSerializedVariables())
     {
         std::cout << field.first << std::endl;
-        std::cout << "\tTYPE: " << field.second.type.name << std::endl;
+        std::cout << "\tTYPE: " << field.second.type.getName() << std::endl;
     }
 }
 

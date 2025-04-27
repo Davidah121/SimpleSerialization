@@ -1,14 +1,20 @@
 #include "TypeInfo.h"
 
+#ifndef _MSC_VER
+#include <cstdlib>
+#include <cxxabi.h>
+#endif
+
 std::string demangleClassName(std::string name)
 {
-    #ifdef _unix_
+    #ifndef _MSC_VER
     std::string finalName = "";
     int status = 0;
-    char* realName = abi::__cxa_demagle(name.c_str(), 0, 0, &status);
+    char* realName = abi::__cxa_demangle(name.c_str(), 0, 0, &status);
     finalName = realName;
     std::free(realName);
     return finalName;
-    #endif
+    #else
     return name;
+    #endif
 }

@@ -8,11 +8,6 @@
 #define CONSTEXPR_OPTION 
 #endif
 
-#ifdef _unix_
-#include <cstdlib>
-#include <cxxabi.h>
-#endif
-
 std::string demangleClassName(std::string name);
 
 template<typename T>
@@ -49,7 +44,7 @@ struct TypeInfo final
 
     std::string getName() const
     {
-        #ifdef _unix_
+        #ifndef _MSC_VER
             return demangleClassName((std::string)name);
         #else
             return (std::string)name;
