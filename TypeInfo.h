@@ -44,11 +44,7 @@ struct TypeInfo final
 
     std::string getName() const
     {
-        #ifndef _MSC_VER
-            return demangleClassName((std::string)name);
-        #else
-            return (std::string)name;
-        #endif
+        return demangleClassName((std::string)name);
     }
     
     template <typename T>
