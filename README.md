@@ -227,7 +227,7 @@ to bind the proper virtual functions.
 
 Q: Why not use std::any for SerializedVariable instead of a custom structure?
 
-A: Simple. To target eariler version of C++. std::any does provide nice guarantees when casting but it isn't avaiable on versions of C++ earlier than C++17. 
+A: Simple. To target eariler versions of C++. std::any does provide nice guarantees when casting but it isn't avaiable on versions of C++ earlier than C++17. 
 
 For that same reason, __VA_OPT__ is not the default method for the preprocessor methods FOR_EACH. You'd need C++20 to guarantee that it exists.
 
@@ -305,3 +305,13 @@ but I'll leave this up to extension for specific use cases.
 
 Leaving pointers as undefined behavior causes developers to assume that pointers will not be stored correctly and to create a method that best suits their needs instead of relying on a one size
 fits all approach.
+
+For reference, [here](https://github.com/Davidah121/SMPL/blob/master/include/DefaultSerialization_SmartMemory.h) is an implementation of Serialization of SmartMemory in my static library SMPL. Since the class provides more a bit information than
+shared_pointers and unique_pointers, it can bypass a few of the issues outlined above.
+
+## Compatibility Notes
+This works on GCC, MSVC, LLVM Clang, and variants using MINGW like LLVM-MINGW or GCC variants.
+
+Note that MSVC CL and Clang when using MSVC bindings do not need to demangle class names as type_info will already contain them. GCC and MINGW based compilers will likely need to.
+
+The current code may not be robust enough to catch all cases since some compilers do set _MSC_VER even though they aren't MSVC compilers or use their bindings so they may not demangle class names automatically. As I can't afford to just pay for access to every compiler out there including proprietary ones the public may never have access to, note that only TypeInfo.cpp needs to be changed if demangling class names is incorrect.
