@@ -168,6 +168,17 @@ void testFunction(SerializedObject* obj)
 }
 ```
 
+Newer Lightweight Serialization method:
+```C++
+struct Vec4f
+{
+    float x, y, z, w;
+    SERIALIZE_CLASS_LIGHT(Vec4f, x, y, z, w)
+};
+//Note that sizeof(Vec4f) == 16
+//You do not get access to getClass()
+```
+
 Actual Serialization and Deserialization of data:
 ```C++
 SomeData globalSomeData;
