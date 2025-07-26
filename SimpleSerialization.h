@@ -43,11 +43,15 @@ template<typename T>
 void staticDeserializeVar(SerializedStreamable& output, DataFormatter& preprocessor, const SerializedVariable<T>& var);
 
 
-//OVERLOAD THESE 2
+//OVERLOAD THESE 3
 template<typename T>
 void staticSerializeHandler(SerializedStreamable& output, DataFormatter& preprocessor, const std::string varName, T& var);
+
 template<typename T>
 void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& preprocessor, const std::string varName, T& var);
+
+std::unordered_map<std::string, SerializedVariable<void>> getSerializedVariables(SerializedObject& v);
+//
 
 void mergeSerializedVariableMaps(std::string rootClassName, const std::unordered_map<std::string, SerializedVariable<void>>& rootMap, std::unordered_map<std::string, SerializedVariable<void>>& currMap);
 
@@ -153,6 +157,35 @@ protected:
         SERIALIZE_SUPER_SERIALIZE_FUNCTION(__VA_ARGS__)\
         SERIALIZE_SUPER_SERIALIZE_VARIABLES(__VA_ARGS__)
 
+#ifndef SERIALIZE_LIGHT
+    #ifndef SERIALIZE_LIGHT_VOID
+        #define SERIALIZE_LIGHT_VOID(var) {#var, &v.var, TypeInfo::get<decltype(v.var)>()}
+    #endif
+    #ifndef SERIALIZE_LIGHT
+        #define SERIALIZE_LIGHT(var) SerializedVariable<decltype(var)>SERIALIZE_LIGHT_VOID(var)
+    #endif
+    #ifndef SERIALIZE_LIGHT_MAP
+        #define SERIALIZE_LIGHT_MAP(var) {#var, SERIALIZE_LIGHT_VOID(var)}
+    #endif
+    #define SERIALIZE_CLASS_LIGHT(T, ...)\
+    private:\
+        friend std::unordered_map<std::string, SerializedVariable<void>> getSerializedVariables(T& v)\
+        {\
+            return {FOR_EACH_LIST(SERIALIZE_LIGHT_MAP, __VA_ARGS__)};\
+        }\  
+        friend void staticSerializeHandler(SerializedStreamable& output, DataFormatter& preprocessor, const std::string varName, T& var)\
+        {\
+            preprocessor.writeStart(output, DataFormatter::FORMAT_OBJECT, TypeInfo::get<T>(), varName, 1);\
+            EXECUTE_IF_NOT_EMPTY(SERIALIZE_HELPER_MACRO(__VA_ARGS__), __VA_ARGS__)\
+        }\
+        friend void staticDeserializeHandler(SerializedStreamable& input, DataFormatter& preprocessor, const std::string varName, T& var)\
+        {\
+            int64_t elements = preprocessor.readStart(input, DataFormatter::FORMAT_OBJECT, TypeInfo::get<T>(), varName);\
+            if(elements < 1)\
+                return;\
+            EXECUTE_IF_NOT_EMPTY(DESERIALIZE_HELPER_MACRO(__VA_ARGS__), __VA_ARGS__)\
+        }
+#endif
 
 inline void mergeSerializedVariableMaps(std::string rootClassName, const std::unordered_map<std::string, SerializedVariable<void>>& rootMap, std::unordered_map<std::string, SerializedVariable<void>>& currMap)
 {
@@ -163,6 +196,10 @@ inline void mergeSerializedVariableMaps(std::string rootClassName, const std::un
     }
 }
 
+inline std::unordered_map<std::string, SerializedVariable<void>> getSerializedVariables(SerializedObject& v)
+{
+    return v.getSerializedVariables();
+}
 
 template<typename T, typename... Args>
 void staticSerialize(SerializedStreamable& output, DataFormatter& formatter, T& var1, Args&... var2)
